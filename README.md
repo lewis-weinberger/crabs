@@ -37,6 +37,7 @@ The following GIF shows some gameplay:
 A short explanation of the game can be found by passing the `--help` switch:
 ```
 $ crabs --help
+
 crabs --help
 ------------
 Guide the crabs to safety:
@@ -49,7 +50,7 @@ Insert scenery by typing the appropriate key:
 	/ forward ramp
 	\ backward ramp
 	@ trampoline
-Type q to quit.
+Type q to quit level.
 
 Use a custom map saved in RON format:
 	$ crabs custom_level.ron
@@ -69,25 +70,7 @@ There are a number of default levels built into the game, but it is also possibl
 )
 ```
 
-You can then load this level by passing the RON file path as the first argument to `crabs`. If you don't want to type out a string manually to represent your map, you can use the provided `make-map` program. This uses the same interface as the game, and allows you to place scenery to make a map. 
-
-```
-$ make-map --help
-make-map --help
-------------
-Design your own map!
-Use the arrow keys to move the cursor:
-	+ cursor
-Insert scenery by typing the appropriate key:
-	X safety
-	# block
-	/ forward ramp
-	\ backward ramp
-	@ trampoline
-Type q to quit. You will be prompted for a filename to save your new map.
-```
-
-An example level is provided in the [examples](/examples) directory.
+You can then load this level by passing the RON file path as the first argument to `crabs`. If you don't want to type out a string manually to represent your map, you can use the provided `make-map` program. This uses the same interface as the game, and allows you to place scenery to make a map. An example level is provided in the [examples](/examples) directory.
 
 *Note that the y-coordinate starts at 0 at the top of the terminal, so positive y-velocity corresponds to a downward velocity on the terminal!
 

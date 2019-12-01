@@ -18,7 +18,7 @@ pub fn process_args(mut args: Args) -> Vec<(Entities, Map)> {
             match arg.as_str() {
                 // Print help
                 "--help" => {
-                    println!("crabs --help");
+                    println!("\ncrabs --help");
                     println!("------------");
                     println!("Guide the crabs to safety:");
                     println!("\t. crab");
