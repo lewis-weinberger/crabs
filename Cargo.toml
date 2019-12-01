@@ -1,0 +1,18 @@
+[package]
+name = "crabs"
+version = "0.1.0"
+authors = ["drvog"]
+edition = "2018"
+default-run = "crabs"
+description = "A simple terminal game."
+repository = "https://github.com/lewis-weinberger/crabs"
+readme = "README.md"
+categories = ["command-line-utilities", "games"]
+license-file = "LICENSE"
+
+[dependencies]
+termion = "1.5.4"
+
+[[bin]]
+name = "make-map"
+path = "src/make_map.rs"
