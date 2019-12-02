@@ -63,9 +63,13 @@ There are a number of default levels built into the game, but it is also possibl
 
 ```
 // custom_level.ron
+// The below corresponds to a single crab (with ID 1)
+// with position [y, x] = [2, 3] and velocity [y, x] = [1, -1]
 (
-    positions: [[1,1], [1, 3]],
-    velocities: [[1,1], [1, -1]],
+    x: { 1: 2 },
+    y: { 1: 3 },
+    vx: { 1: -1 },
+    vy: { 1: 1 },
     layout: "   \n   \n###",
 )
 ```

@@ -1,13 +1,20 @@
 pub mod levels;
-use termion::event::Key;
-use std::process;
+use ron::de::from_reader;
+use serde::Deserialize;
+use std::collections::HashMap;
 use std::env::Args;
 use std::fs::File;
-use std::io::{Write, stdin};
+use std::io::{stdin, Write};
+use std::process;
+use termion::color;
+use termion::event::Key;
 
 // Number of game loops to wait in between updating crab positions
+#[cfg(debug_assertions)]
 pub const RATE: usize = 10;
-// Note: increase RATE to slow down the crabs!
+
+#[cfg(not(debug_assertions))]
+pub const RATE: usize = 100;
 
 pub fn process_args(mut args: Args) -> Vec<(Entities, Map)> {
     // Skip executable name
@@ -34,14 +41,12 @@ pub fn process_args(mut args: Args) -> Vec<(Entities, Map)> {
                     println!("Use a custom map saved in RON format:");
                     println!("\t$ crabs custom_level.ron");
                     process::exit(0);
-                },
-                
+                }
+
                 // Load custom level
-                path => {
-                    load_level(&path)
-                },
+                path => load_level(&path),
             }
-        },
+        }
         None => {
             // Load default level
             levels::default_levels()
@@ -49,8 +54,47 @@ pub fn process_args(mut args: Args) -> Vec<(Entities, Map)> {
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub struct LoadedLevel {
+    x: HashMap<u16, u16>,
+    y: HashMap<u16, u16>,
+    vx: HashMap<i16, i16>,
+    vy: HashMap<i16, i16>,
+    layout: String,
+}
+
 fn load_level(path: &str) -> Vec<(Entities, Map)> {
-    unimplemented!()
+    match File::open(path) {
+        Ok(file) => {
+            // Decode RON format of configuration file
+            let loaded: LoadedLevel = match from_reader(file) {
+                Ok(x) => x,
+                Err(err) => {
+                    eprintln!("Unable to read custom level: {:?}", err);
+                    return levels::default_levels();
+                }
+            };
+            let entities = Entities::new(
+                convert_to_vec(loaded.y, loaded.x),
+                convert_to_vec(loaded.vy, loaded.vx),
+            );
+            let map = Map::new(&loaded.layout);
+            vec![(entities, map)]
+        }
+        Err(err) => {
+            eprintln!("Unable to read custom level file: {:?}", err.kind());
+            levels::default_levels()
+        }
+    }
+}
+
+fn convert_to_vec<T: Copy, U: From<T>>(x: HashMap<T, T>, y: HashMap<T, T>) -> Vec<[U; 2]> {
+    let mut store: Vec<[U; 2]> = Vec::new();
+    for ((_, xi), (_, yi)) in x.iter().zip(y.iter()) {
+        store.push([U::from(*xi), U::from(*yi)]);
+    }
+    eprintln!("Loaded {} crabs.", store.len());
+    store
 }
 
 #[derive(Debug, Clone)]
@@ -66,7 +110,7 @@ impl Entities {
         }
         Entities { collection }
     }
-    
+
     pub fn evolve(&mut self, map: &mut Map, complete: &mut bool) {
         // Add positions of crab to map
         map.instantaneous(&self);
@@ -88,7 +132,6 @@ impl Entities {
         if self.collection.len() == 0 {
             *complete = true;
         }
-        
     }
 }
 
@@ -102,18 +145,16 @@ impl Crab {
     fn new(position: [usize; 2], velocity: [isize; 2]) -> Self {
         Crab { position, velocity }
     }
-    
+
     fn advance(&mut self, map: &mut Map) -> bool {
         // Remove previous position from map
         map.overide(&self.position, Scenery::Empty);
-        
+
         // Evaluate x direction first (no diagonal motion!)
-        let safe_x = self.advance_one_step_x(map,
-                                             self.velocity[1].abs() as usize);
+        let safe_x = self.advance_one_step_x(map, self.velocity[1].abs() as usize);
 
         // Evaluate y direction
-        let safe_y = self.advance_one_step_y(map,
-                                             self.velocity[0].abs() as usize);
+        let safe_y = self.advance_one_step_y(map, self.velocity[0].abs() as usize);
 
         // Add new position to map
         map.update(&self.position, Scenery::StationaryCrab);
@@ -137,44 +178,56 @@ impl Crab {
                         self.position = next;
                         self.advance_one_step_x(map, n - 1);
                         false
-                    },
+                    }
                     Scenery::ForwardWedge => {
                         // Advance up wedge
                         if self.velocity[1] > 0 {
-                            let tmp = self.velocity[0];
+                            let tmp_vel = self.velocity[0];
+                            let tmp_pos = self.position[0];
                             self.velocity[0] = -1;
                             self.advance_one_step_y(map, 1);
-                            self.velocity[0] = tmp;
-                            self.advance_one_step_x(map, n);
+                            self.velocity[0] = tmp_vel;
+                            if self.position[0] == tmp_pos {
+                                // Rebound
+                                self.velocity[1] *= -1;
+                            } else {
+                                self.advance_one_step_x(map, n);
+                            }
                         } else {
                             // Rebound
                             self.velocity[1] *= -1;
                         }
                         false
-                    },
+                    }
                     Scenery::BackwardWedge => {
                         // Advance up wedge
                         if self.velocity[1] < 0 {
-                            let tmp = self.velocity[0];
+                            let tmp_vel = self.velocity[0];
+                            let tmp_pos = self.position[0];
                             self.velocity[0] = -1;
                             self.advance_one_step_y(map, 1);
-                            self.velocity[0] = tmp;
-                            self.advance_one_step_x(map, n);
+                            self.velocity[0] = tmp_vel;
+                            if self.position[0] == tmp_pos {
+                                // Rebound
+                                self.velocity[1] *= -1;
+                            } else {
+                                self.advance_one_step_x(map, n);
+                            }
                         } else {
                             // Rebound
                             self.velocity[1] *= -1;
                         }
                         false
-                    },
+                    }
                     Scenery::Safety => {
                         // the crab made it to safety!
                         true
-                    },
+                    }
                     _ => {
                         // Rebound
                         self.velocity[1] *= -1;
                         false
-                    },
+                    }
                 }
             }
         }
@@ -195,21 +248,19 @@ impl Crab {
                         self.position = next;
                         self.advance_one_step_y(map, n - 1);
                         false
-                    },
+                    }
                     Scenery::Trampoline => {
                         self.velocity[0] *= -1;
                         false
-                    },
-                    Scenery::Safety => {
-                        true
-                    },
+                    }
+                    Scenery::Safety => true,
                     _ => {
                         if self.velocity[0] < 0 {
                             // Rebound above
                             self.velocity[0] *= -1;
                         }
                         false
-                    },
+                    }
                 }
             }
         }
@@ -218,7 +269,7 @@ impl Crab {
 
 #[derive(Debug, Clone)]
 pub struct Map {
-    dimensions: [usize; 2],
+    pub dimensions: [usize; 2],
     layout: Vec<Vec<Scenery>>,
     index: [usize; 2],
 }
@@ -241,8 +292,12 @@ impl Map {
                 *cell = Scenery::new(ch);
             }
         }
-        
-        Map { dimensions, layout, index: [0, 0] }
+
+        Map {
+            dimensions,
+            layout,
+            index: [0, 0],
+        }
     }
 
     fn instantaneous(&mut self, entities: &Entities) {
@@ -293,7 +348,9 @@ impl Map {
         let tmp_dims = [self.dimensions[0] as isize, self.dimensions[1] as isize];
 
         // Update coordinates with periodic boundaries
-        for ((user_i, &dim_i), &change_i) in tmp_user.iter_mut().zip(tmp_dims.iter()).zip(change.iter()) {
+        for ((user_i, &dim_i), &change_i) in
+            tmp_user.iter_mut().zip(tmp_dims.iter()).zip(change.iter())
+        {
             *user_i = if *user_i + change_i >= dim_i {
                 // Wrap above
                 *user_i + change_i - dim_i
@@ -313,10 +370,11 @@ impl Map {
     fn to_string(&self) -> String {
         let mut buffer = String::new();
         for (_, x, ch) in self.clone() {
-            if x == self.dimensions[0] {
-                buffer.push('\n');
-            }
             buffer.push(ch);
+            if x == self.dimensions[1] - 1 {
+                buffer.push('\\');
+                buffer.push('n');
+            }
         }
         buffer
     }
@@ -326,19 +384,25 @@ impl Iterator for Map {
     type Item = (usize, usize, char);
 
     fn next(&mut self) -> Option<(usize, usize, char)> {
-        if self.index[0] + 1 < self.dimensions[0] {
+        if (self.index[1] + 1) * (self.index[0] + 1) < self.dimensions[0] * self.dimensions[1] {
+            // Current position
+            let y = self.index[0];
+            let x = self.index[1];
+
+            // Current character
+            let ch = self.layout[y][x].to_char();
+
             // Advance position in map
             if self.index[1] + 1 == self.dimensions[1] {
-                self.index[0] += 1;
-                self.index[1] = 0;
+                if self.index[0] + 1 < self.dimensions[0] {
+                    self.index[0] += 1;
+                    self.index[1] = 0;
+                }
             } else {
                 self.index[1] += 1;
             }
 
-            // Find next character
-            let ch = self.layout[self.index[0]][self.index[1]].to_char();
-        
-            Some((self.index[0], self.index[1], ch))
+            Some((y, x, ch))
         } else {
             None
         }
@@ -381,6 +445,25 @@ impl Scenery {
     }
 }
 
+pub trait Colour {
+    fn to_fg_colour(&self) -> String;
+}
+
+impl Colour for char {
+    fn to_fg_colour(&self) -> String {
+        match self {
+            ' ' => format!("{}", color::Fg(color::Reset)),
+            '#' => format!("{}", color::Fg(color::Reset)),
+            '/' => format!("{}", color::Fg(color::Yellow)),
+            '\\' => format!("{}", color::Fg(color::Yellow)),
+            '@' => format!("{}", color::Fg(color::Cyan)),
+            'X' => format!("{}", color::Fg(color::Magenta)),
+            '.' => format!("{}", color::Fg(color::Red)),
+            _ => format!("{}", color::Fg(color::Reset)),
+        }
+    }
+}
+
 pub fn user_input(key: Key, user: &mut [usize; 2], complete: &mut bool, map: &mut Map) {
     match key {
         // Move cursor position
@@ -415,7 +498,7 @@ pub fn user_input(key: Key, user: &mut [usize; 2], complete: &mut bool, map: &mu
         Key::Char('q') => {
             *complete = true;
         }
-        _ => ()
+        _ => (),
     }
 }
 
@@ -424,15 +507,15 @@ pub fn check_resize(term_size: &mut (u16, u16)) -> bool {
     match termion::terminal_size() {
         Ok(new) => {
             if *term_size == new {
-                return false
+                return false;
             } else {
                 *term_size = new;
-                return true
+                return true;
             }
         }
         Err(err) => {
             eprintln!("Error determining terminal size: {:?}", err.kind());
-            return true
+            return true;
         }
     }
 }
@@ -451,22 +534,12 @@ pub fn prompt_for_filename() -> String {
     buffer
 }
 
-pub fn save_to_ron(filename: &str, map: &Map) {
+pub fn save_to_ron(filename: &str, map: &Map) -> Result<(), std::io::Error> {
     // Open file
-    let mut file = match File::create(filename.trim()) {
-        Ok(f) => f,
-        Err(err) => {
-            eprintln!("Unable to open save file: {:?}", err.kind());
-            return ()
-        },
-    };
+    let mut file = File::create(filename.trim())?;
 
     // Output to file
-    match write!(file, "// Custom level\n(\n\tpositions: [],\n\tvelocities: [],\n\tlayout: \"{}\",\n)\n", &map.to_string()) {
-        Ok(_) => (),
-        Err(err) => {
-            eprintln!("Unable to write to save file: {:?}", err.kind());
-            return ()
-        },
-    };
+    write!(file, "// Custom level\n(\n\tx: {{ 1:1 }},\n\ty: {{ 1:1 }},\n\tvx: {{ 1:1 }},\n\tvy: {{ 1:1 }},\n\tlayout: \"{}\",\n)\n", &map.to_string())?;
+
+    Ok(())
 }

@@ -12,6 +12,8 @@ license-file = "LICENSE"
 
 [dependencies]
 termion = "1.5.4"
+ron = "0.5.1"
+serde = "1.0.0"
 
 [[bin]]
 name = "make-map"
