@@ -7,7 +7,8 @@ use termion::{clear, color, cursor, style};
 
 fn main() -> Result<(), std::io::Error> {
     // Process command line arguments
-    let levels = process_args(env::args());
+    let mut rate: usize = RATE;
+    let levels = process_args(env::args(), &mut rate);
 
     // Initialise terminal
     let mut stdout = stdout().into_raw_mode()?;
@@ -37,7 +38,7 @@ fn main() -> Result<(), std::io::Error> {
                 // Crabs are advanced every RATE number of game loops
                 crabs.evolve(&mut map, &mut complete);
             }
-            loop_count = (loop_count + 1) % RATE;
+            loop_count = (loop_count + 1) % rate;
 
             // Allow user to adjust map (input is asynchronous)
             match stdin.next() {

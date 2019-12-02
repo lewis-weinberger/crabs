@@ -14,9 +14,9 @@ use termion::event::Key;
 pub const RATE: usize = 10;
 
 #[cfg(not(debug_assertions))]
-pub const RATE: usize = 100;
+pub const RATE: usize = 50;
 
-pub fn process_args(mut args: Args) -> Vec<(Entities, Map)> {
+pub fn process_args(mut args: Args, rate: &mut usize) -> Vec<(Entities, Map)> {
     // Skip executable name
     args.next();
 
@@ -40,11 +40,41 @@ pub fn process_args(mut args: Args) -> Vec<(Entities, Map)> {
                     println!("Type q to quit level.\n");
                     println!("Use a custom map saved in RON format:");
                     println!("\t$ crabs custom_level.ron");
+                    println!("To adjust the crab speed:");
+                    println!("\t$ crabs --rate N");
+                    println!("where larger N makes the crabs slower!\n");
                     process::exit(0);
-                }
+                },
+
+                // User adjusted rate
+                "--rate" => {
+                    match args.next() {
+                        Some(new_rate) => {
+                            *rate = match new_rate.parse::<usize>() {
+                                Ok(r) => {
+                                    eprintln!("Using adjusted rate: {}",
+                                              new_rate);
+                                    r
+                                },
+                                Err(_) => {
+                                    eprintln!("{} not a valid rate!",
+                                              new_rate);
+                                    RATE
+                                },
+                            };
+                            levels::default_levels()
+                        },
+                        None => {
+                            eprintln!("No rate provided...");
+                            levels::default_levels()
+                        },
+                    }
+                },
 
                 // Load custom level
-                path => load_level(&path),
+                path => {
+                    load_level(&path)
+                },
             }
         }
         None => {
@@ -453,12 +483,12 @@ impl Colour for char {
     fn to_fg_colour(&self) -> String {
         match self {
             ' ' => format!("{}", color::Fg(color::Reset)),
-            '#' => format!("{}", color::Fg(color::Reset)),
+            '#' => format!("{}", color::Fg(color::Red)),
             '/' => format!("{}", color::Fg(color::Yellow)),
             '\\' => format!("{}", color::Fg(color::Yellow)),
             '@' => format!("{}", color::Fg(color::Cyan)),
-            'X' => format!("{}", color::Fg(color::Magenta)),
-            '.' => format!("{}", color::Fg(color::Red)),
+            'X' => format!("{}", color::Fg(color::Reset)),
+            '.' => format!("{}", color::Fg(color::Reset)),
             _ => format!("{}", color::Fg(color::Reset)),
         }
     }

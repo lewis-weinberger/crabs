@@ -1,7 +1,7 @@
-# *Crabs*
+# :crab:  **Crabs**  :crab: 
 >A simple terminal game written in Rust. 
 
-This is a pretty minimal game in which you have to guide a consortium of crabs to safety. Gameplay is heavily inspired by Jagex's [Flea Circus](https://jagex.fandom.com/wiki/Flea_Circus) and DMA Design's [Lemmings](https://en.wikipedia.org/wiki/Lemmings_(video_game)). I wrote this as a prototype for a full graphical version, which I hope to one day write using [Amethyst](https://github.com/amethyst/amethyst).
+This is a pretty minimal game in which you have to guide a consortium of crabs to safety. Gameplay is heavily inspired by Jagex's [Flea Circus](https://jagex.fandom.com/wiki/Flea_Circus) and DMA Design's [Lemmings](https://en.wikipedia.org/wiki/Lemmings_(video_game)). I wrote this as a prototype for a full graphical version, which maybe I'll write one day using [Amethyst](https://github.com/amethyst/amethyst). I have probably missed some edge cases in the game -- if it crashes whilst you're playing, post an issue (or, better yet, submit a pull request with a fix :sunglasses:).
 
 [![crates.io](https://img.shields.io/crates/v/crabs)](https://crates.io/crates/crabs)
 
@@ -23,14 +23,15 @@ Requires an installation of [Rust](https://www.rust-lang.org/tools/install). Rec
 
 The latest version can also be installed directly from crates.io:
 
-    $ cargo install crabs
+    $ cargo install crabs                                  # download from crates.io 
+    $ crabs                                                # play 
 
-By default this downloads and builds the **crabs** crate, installing the binary in `$HOME/.cargo/bin/`. Otherwise you can download pre-compiled binaries from the Releases section.
+By default this downloads and builds the **crabs** crate, installing the binary in `$HOME/.cargo/bin/`. Otherwise you can download pre-compiled binaries from the [Releases](https://github.com/lewis-weinberger/crabs/releases) section.
 
 <a name="usage"></a>
 ## Usage
 
-The following GIF shows some gameplay:
+The following (low-quality) GIF shows some gameplay:
 
 ![Crabs gameplay](gameplay.gif)
 
@@ -54,7 +55,12 @@ Type q to quit level.
 
 Use a custom map saved in RON format:
 	$ crabs custom_level.ron
+To adjust the crab speed:
+	$ crabs --rate N
+where larger N makes the crabs slower!
 ```
+
+Note that you can change the speed of the crabs using the `--rate` switch. This switch allows the user to specify how many game loops are skipped before advancing the crabs. I've chosen some defaults for these based on my own machine, so they might not be ideal on other, significantly faster or slower machines.
 
 <a name="customisation"></a>
 ## Customisation
