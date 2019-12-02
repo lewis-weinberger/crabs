@@ -1,6 +1,8 @@
 # :crab:  **Crabs**  :crab: 
 >A simple terminal game written in Rust. 
 
+- [CURRENT STATUS]: *Alpha testing*
+
 This is a pretty minimal game in which you have to guide a consortium of crabs to safety. Gameplay is heavily inspired by Jagex's [Flea Circus](https://jagex.fandom.com/wiki/Flea_Circus) and DMA Design's [Lemmings](https://en.wikipedia.org/wiki/Lemmings_(video_game)). I wrote this as a prototype for a full graphical version, which maybe I'll write one day using [Amethyst](https://github.com/amethyst/amethyst). I have probably missed some edge cases in the game -- if it crashes whilst you're playing, post an issue (or, better yet, submit a pull request with a fix :sunglasses:).
 
 [![crates.io](https://img.shields.io/crates/v/crabs)](https://crates.io/crates/crabs)
@@ -21,12 +23,12 @@ Requires an installation of [Rust](https://www.rust-lang.org/tools/install). Rec
     $ cd crabs                                             # cd into source directory
     $ cargo run --release                                  # compile and run
 
-The latest version can also be installed directly from crates.io:
+[TODO]~~The latest version can also be installed directly from crates.io~~:
 
     $ cargo install crabs                                  # download from crates.io 
-    $ crabs                                                # play 
+    $ crabs                                                # play
 
-By default this downloads and builds the **crabs** crate, installing the binary in `$HOME/.cargo/bin/`. Otherwise you can download pre-compiled binaries from the [Releases](https://github.com/lewis-weinberger/crabs/releases) section.
+~~By default this downloads and builds the **crabs** crate, installing the binary in `$HOME/.cargo/bin/`. Otherwise you can download pre-compiled binaries from the [Releases](https://github.com/lewis-weinberger/crabs/releases) section~~.
 
 <a name="usage"></a>
 ## Usage
