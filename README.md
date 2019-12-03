@@ -62,22 +62,22 @@ To adjust the crab speed:
 where larger N makes the crabs slower!
 ```
 
-Note that you can change the speed of the crabs using the `--rate` switch. This switch allows the user to specify how many game loops are skipped before advancing the crabs. I've chosen some defaults for these based on my own machine, so they might not be ideal on other, significantly faster or slower machines.
+Note that you can change the speed of the crabs using the `--rate` switch. This switch allows the user to specify how many game loops are skipped before advancing the crabs. I've chosen some defaults for these based on my own machine, so they might not be ideal on other (significantly faster or slower) machines.
 
 <a name="customisation"></a>
 ## Customisation
 
-There are a number of default levels built into the game, but it is also possible to play your own! In order to do this you'll need to create a map and add some crabs. The provided `make-map` program can be used to create a map in the appropriate format (a [RON]() file). It uses the same user-interface as the game.
+There are a number of default levels built into the game, but it is also possible to play your own! In order to do this you'll need to create a map and add some crabs. The provided `make-map` program can be used to create a map in the appropriate format (a [RON](https://github.com/ron-rs/ron) file). It uses the same user-interface as the game.
 ```
-$ make-map                  # will prompt for filename, e.g. my_custom_map.ron
-$ crabs my_custom_map.ron
+$ make-map                  # will prompt for filename, e.g. my_custom_level.ron
+$ crabs my_custom_level.ron
 ```
 Alternatively you can manually write a level file as follows: (i) the map can be loaded from a string which contains a rectangular block of text; (ii) the crabs need to have positions and velocities* specified. The layout of the RON file should be:
 
 ```
-// custom_level.ron
+// my_custom_level.ron
 // The below corresponds to a single crab (with ID 1)
-// with position [y, x] = [2, 3] and velocity [y, x] = [1, -1]
+// with position [y, x] = [2, 3] and velocity [vy, vx] = [1, -1]
 (
     x: { 1: 2 },
     y: { 1: 3 },

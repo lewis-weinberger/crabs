@@ -1,6 +1,7 @@
 pub mod levels;
 use ron::de::from_reader;
 use serde::Deserialize;
+use std::cmp;
 use std::collections::HashMap;
 use std::env::Args;
 use std::fs::File;
@@ -15,6 +16,9 @@ pub const RATE: usize = 10;
 
 #[cfg(not(debug_assertions))]
 pub const RATE: usize = 50;
+
+// Terminal velocity
+pub const VMAX: isize = 10;
 
 pub fn process_args(mut args: Args, rate: &mut usize) -> Vec<(Entities, Map)> {
     // Skip executable name
@@ -175,10 +179,10 @@ impl Crab {
         map.overide(&self.position, Scenery::Empty);
 
         // Evaluate x direction first (no diagonal motion!)
-        let safe_x = self.advance_one_step_x(map, self.velocity[1].abs() as usize);
+        let safe_x = self.advance_one_step_x(map, cmp::max(1, self.velocity[1].abs() as usize));
 
         // Evaluate y direction
-        let safe_y = self.advance_one_step_y(map, self.velocity[0].abs() as usize);
+        let safe_y = self.advance_one_step_y(map, cmp::max(1, self.velocity[0].abs() as usize));
 
         // Add new position to map
         map.update(&self.position, Scenery::StationaryCrab);
@@ -189,11 +193,11 @@ impl Crab {
 
     fn advance_one_step_x(&mut self, map: &Map, steps: usize) -> bool {
         match steps {
-            0 => false,
+            0 => (),
             n => {
                 // Find next position along direction
                 let mut next = self.position.clone();
-                map.wrap(&mut next, [0, self.velocity[1]]);
+                map.wrap(&mut next, [0, self.velocity[1].signum()]);
 
                 // Determine if obstacles are present
                 match map.layout[next[0]][next[1]] {
@@ -201,14 +205,13 @@ impl Crab {
                         // Move into empty space
                         self.position = next;
                         self.advance_one_step_x(map, n - 1);
-                        false
                     }
                     Scenery::ForwardWedge => {
                         // Advance up wedge
                         if self.velocity[1] > 0 {
                             let tmp_vel = self.velocity[0];
                             let tmp_pos = self.position[0];
-                            self.velocity[0] = -1;
+                            self.velocity[0] = -2; // overcome gravity
                             self.advance_one_step_y(map, 1);
                             self.velocity[0] = tmp_vel;
                             if self.position[0] == tmp_pos {
@@ -221,14 +224,13 @@ impl Crab {
                             // Rebound
                             self.velocity[1] *= -1;
                         }
-                        false
                     }
                     Scenery::BackwardWedge => {
                         // Advance up wedge
                         if self.velocity[1] < 0 {
                             let tmp_vel = self.velocity[0];
                             let tmp_pos = self.position[0];
-                            self.velocity[0] = -1;
+                            self.velocity[0] = -2; // overcome gravity
                             self.advance_one_step_y(map, 1);
                             self.velocity[0] = tmp_vel;
                             if self.position[0] == tmp_pos {
@@ -241,29 +243,49 @@ impl Crab {
                             // Rebound
                             self.velocity[1] *= -1;
                         }
-                        false
                     }
+                    //                    Scenery::ForwardBoost => {
+                    //                        // Speed boost forward
+                    //                        if self.velocity[1].abs() < VMAX {
+                    //                            self.velocity[1] += 1;
+                    //                        }
+                    //                        self.position = next;
+                    //                        self.advance_one_step_x(map, n - 1);
+                    //                    }
+                    //                    Scenery::BackwardBoost => {
+                    //                        // Speed boost backward
+                    //                        if self.velocity[1].abs() < VMAX {
+                    //                            self.velocity[1] -= 1;
+                    //                        }
+                    //                        self.position = next;
+                    //                        self.advance_one_step_x(map, n - 1);
+                    //                    }
                     Scenery::Safety => {
                         // the crab made it to safety!
-                        true
+                        return true;
                     }
                     _ => {
                         // Rebound
                         self.velocity[1] *= -1;
-                        false
                     }
                 }
             }
         }
+        false
     }
 
     fn advance_one_step_y(&mut self, map: &Map, steps: usize) -> bool {
         match steps {
-            0 => false,
+            0 => (),
             n => {
+                // Acceleration due to gravity
+                if self.velocity[0] < VMAX {
+                    self.velocity[0] += 1;
+                }
+
                 // Find next position along direction
                 let mut next = self.position.clone();
-                map.wrap(&mut next, [self.velocity[0], 0]);
+                map.wrap(&mut next, [self.velocity[0].signum(), 0]);
 
                 // Determine if obstacles are present
                 match map.layout[next[0]][next[1]] {
@@ -271,23 +293,24 @@ impl Crab {
                     Scenery::Empty => {
                         self.position = next;
                         self.advance_one_step_y(map, n - 1);
-                        false
                     }
                     Scenery::Trampoline => {
-                        self.velocity[0] *= -1;
-                        false
+                        self.velocity[0] = -VMAX;
                     }
-                    Scenery::Safety => true,
+                    Scenery::Safety => return true,
                     _ => {
                         if self.velocity[0] < 0 {
                             // Rebound above
                             self.velocity[0] *= -1;
+                        } else {
+                            // Stop below
+                            self.velocity[0] = 0;
                         }
-                        false
                     }
                 }
             }
         }
+        false
     }
 }
 
@@ -439,6 +462,8 @@ pub enum Scenery {
     Block,
     ForwardWedge,
     BackwardWedge,
+    ForwardBoost,
+    BackwardBoost,
     Trampoline,
     Safety,
     StationaryCrab,
@@ -450,6 +475,8 @@ impl Scenery {
             '#' => Self::Block,
             '/' => Self::ForwardWedge,
             '\\' => Self::BackwardWedge,
+            '>' => Self::ForwardBoost,
+            '<' => Self::BackwardBoost,
             '@' => Self::Trampoline,
             'X' => Self::Safety,
             _ => Self::Empty,
@@ -462,6 +489,8 @@ impl Scenery {
             Self::Block => '#',
             Self::ForwardWedge => '/',
             Self::BackwardWedge => '\\',
+            Self::ForwardBoost => '>',
+            Self::BackwardBoost => '<',
             Self::Trampoline => '@',
             Self::Safety => 'X',
             Self::StationaryCrab => '.',
@@ -480,6 +509,8 @@ impl Colour for char {
             '#' => format!("{}", color::Fg(color::Red)),
             '/' => format!("{}", color::Fg(color::Yellow)),
             '\\' => format!("{}", color::Fg(color::Yellow)),
+            '<' => format!("{}", color::Fg(color::Yellow)),
+            '>' => format!("{}", color::Fg(color::Yellow)),
             '@' => format!("{}", color::Fg(color::Cyan)),
             'X' => format!("{}", color::Fg(color::Reset)),
             '.' => format!("{}", color::Fg(color::Reset)),
@@ -522,6 +553,12 @@ pub fn user_input(
         }
         Key::Char('@') => {
             map.update(user, Scenery::Trampoline);
+        }
+        Key::Char('>') => {
+            map.update(user, Scenery::ForwardBoost);
+        }
+        Key::Char('<') => {
+            map.update(user, Scenery::BackwardBoost);
         }
 
         // Quit level
