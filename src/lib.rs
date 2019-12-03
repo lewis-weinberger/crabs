@@ -37,44 +37,38 @@ pub fn process_args(mut args: Args, rate: &mut usize) -> Vec<(Entities, Map)> {
                     println!("\t/ forward ramp");
                     println!("\t\\ backward ramp");
                     println!("\t@ trampoline");
-                    println!("Type q to quit level.\n");
+                    println!("Each level, type r to restart and q to quit.\n");
                     println!("Use a custom map saved in RON format:");
                     println!("\t$ crabs custom_level.ron");
                     println!("To adjust the crab speed:");
                     println!("\t$ crabs --rate N");
                     println!("where larger N makes the crabs slower!\n");
                     process::exit(0);
-                },
+                }
 
                 // User adjusted rate
-                "--rate" => {
-                    match args.next() {
-                        Some(new_rate) => {
-                            *rate = match new_rate.parse::<usize>() {
-                                Ok(r) => {
-                                    eprintln!("Using adjusted rate: {}",
-                                              new_rate);
-                                    r
-                                },
-                                Err(_) => {
-                                    eprintln!("{} not a valid rate!",
-                                              new_rate);
-                                    RATE
-                                },
-                            };
-                            levels::default_levels()
-                        },
-                        None => {
-                            eprintln!("No rate provided...");
-                            levels::default_levels()
-                        },
+                "--rate" => match args.next() {
+                    Some(new_rate) => {
+                        *rate = match new_rate.parse::<usize>() {
+                            Ok(r) => {
+                                eprintln!("Using adjusted rate: {}", new_rate);
+                                r
+                            }
+                            Err(_) => {
+                                eprintln!("{} not a valid rate!", new_rate);
+                                RATE
+                            }
+                        };
+                        levels::default_levels()
+                    }
+                    None => {
+                        eprintln!("No rate provided...");
+                        levels::default_levels()
                     }
                 },
 
                 // Load custom level
-                path => {
-                    load_level(&path)
-                },
+                path => load_level(&path),
             }
         }
         None => {
@@ -330,7 +324,7 @@ impl Map {
         }
     }
 
-    fn instantaneous(&mut self, entities: &Entities) {
+    pub fn instantaneous(&mut self, entities: &Entities) {
         // Fill in positions of crabs
         for entity in entities.collection.iter() {
             let y: usize = entity.position[0];
@@ -494,7 +488,13 @@ impl Colour for char {
     }
 }
 
-pub fn user_input(key: Key, user: &mut [usize; 2], complete: &mut bool, map: &mut Map) {
+pub fn user_input(
+    key: Key,
+    user: &mut [usize; 2],
+    complete: &mut bool,
+    reset: &mut bool,
+    map: &mut Map,
+) {
     match key {
         // Move cursor position
         Key::Left => {
@@ -524,10 +524,15 @@ pub fn user_input(key: Key, user: &mut [usize; 2], complete: &mut bool, map: &mu
             map.update(user, Scenery::Trampoline);
         }
 
-        // Quit game
+        // Quit level
         Key::Char('q') => {
             *complete = true;
         }
+        // Reset level
+        Key::Char('r') => {
+            *reset = true;
+        }
+
         _ => (),
     }
 }
@@ -550,26 +555,98 @@ pub fn check_resize(term_size: &mut (u16, u16)) -> bool {
     }
 }
 
-pub fn prompt_for_filename() -> String {
-    println!("Please enter a filename for saving:\n");
+pub fn prompt_for_filename() -> Result<String, std::io::Error> {
+    println!("\nPlease enter a filename for saving:\n");
     let mut buffer = String::new();
-    match stdin().read_line(&mut buffer) {
-        Ok(_) => (),
-        Err(err) => {
-            eprintln!("Unable to read filename: {:?}", err.kind());
-        }
-    };
-    println!("Saving map to: {}", buffer);
-    // TODO: solve the bug here
-    buffer
+    stdin().read_line(&mut buffer)?;
+    println!("Saving map to: {}\n", buffer);
+    Ok(buffer)
 }
 
-pub fn save_to_ron(filename: &str, map: &Map) -> Result<(), std::io::Error> {
+pub fn prompt_for_positions() -> Result<Vec<[usize; 2]>, std::io::Error> {
+    println!("\nPlease enter crab positions");
+    println!("First provide a list of x coordinates (between 0 and 79):\n");
+    let mut xbuffer = String::new();
+    stdin().read_line(&mut xbuffer)?;
+
+    println!("\nSecond provide a list of y coordinates (between 0 and 79):\n");
+    let mut ybuffer = String::new();
+    stdin().read_line(&mut ybuffer)?;
+
+    eprintln!("\nYou have provided the following crab positions [y,x]:");
+    let mut positions: Vec<[usize; 2]> = Vec::new();
+    for (xi, yi) in xbuffer.chars().zip(ybuffer.chars()) {
+        xi.to_digit(10).and_then(|xi| {
+            yi.to_digit(10).map(|yi| {
+                eprintln!("[{}, {}]", yi, xi);
+                positions.push([yi as usize, xi as usize])
+            })
+        });
+    }
+
+    Ok(positions)
+}
+
+pub fn prompt_for_velocities() -> Result<Vec<[isize; 2]>, std::io::Error> {
+    println!("\nPlease enter crab positions");
+    println!("First provide a list of x coordinates (between 0 and 79):\n");
+    let mut xbuffer = String::new();
+    stdin().read_line(&mut xbuffer)?;
+
+    println!("\nSecond provide a list of y coordinates (between 0 and 79):\n");
+    let mut ybuffer = String::new();
+    stdin().read_line(&mut ybuffer)?;
+
+    eprintln!("\nYou have provided the following crab positions [y,x]:");
+    let mut velocities: Vec<[isize; 2]> = Vec::new();
+    for (xi, yi) in xbuffer.chars().zip(ybuffer.chars()) {
+        // Note this breaks down for negative velocities!
+        xi.to_digit(10).and_then(|xi| {
+            yi.to_digit(10).map(|yi| {
+                eprintln!("[{}, {}]", yi, xi);
+                velocities.push([yi as isize, xi as isize])
+            })
+        });
+    }
+
+    Ok(velocities)
+}
+
+pub fn save_to_ron(
+    filename: &str,
+    map: &Map,
+    positions: Vec<[usize; 2]>,
+    velocities: Vec<[isize; 2]>,
+) -> Result<(), std::io::Error> {
     // Open file
     let mut file = File::create(filename.trim())?;
 
+    // Convert to appropriate format
+    let mut x = String::from("{ ");
+    let mut y = String::from("{ ");
+    let mut vx = String::from("{ ");
+    let mut vy = String::from("{ ");
+    for (i, ([yi, xi], [vyi, vxi])) in positions.iter().zip(velocities.iter()).enumerate() {
+        x.push_str(&format!("{}:{}, ", i, xi));
+        y.push_str(&format!("{}:{}, ", i, yi));
+        vx.push_str(&format!("{}:{}, ", i, vxi));
+        vy.push_str(&format!("{}:{}, ", i, vyi));
+    }
+    x.push('}');
+    y.push('}');
+    vx.push('}');
+    vy.push('}');
+
     // Output to file
-    write!(file, "// Custom level\n(\n\tx: {{ 1:1 }},\n\ty: {{ 1:1 }},\n\tvx: {{ 1:1 }},\n\tvy: {{ 1:1 }},\n\tlayout: \"{}\",\n)\n", &map.to_string())?;
+    write!(
+        file,
+        "// Custom level\n(\n\tx: {},\n\ty: {},\n\tvx: {},\n\tvy: {},\n\tlayout: \"{}\",\n)\n",
+        x,
+        y,
+        vx,
+        vy,
+        &map.to_string()
+    )?;
 
     Ok(())
 }

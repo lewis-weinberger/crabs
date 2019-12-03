@@ -25,12 +25,21 @@ fn main() -> Result<(), std::io::Error> {
         let (mut crabs, mut map) = level.clone();
 
         // User position
-        let mut user: [usize; 2] = [map.dimensions[0] / 2, map.dimensions[1] / 2];
+        let mut user = [map.dimensions[0] / 2, map.dimensions[1] / 2];
 
         // Game loop
         let mut complete = false;
+        let mut reset = false;
         let mut loop_count = 1;
         'game: while !complete {
+            // Check if level needs to be reset
+            if reset {
+                crabs = level.0.clone();
+                map = level.1.clone();
+                user = [map.dimensions[0] / 2, map.dimensions[1] / 2];
+                reset = false;
+            }
+
             if loop_count == 0 {
                 // Ensure that map is crab-free
                 map.decrab();
@@ -41,12 +50,10 @@ fn main() -> Result<(), std::io::Error> {
             loop_count = (loop_count + 1) % rate;
 
             // Allow user to adjust map (input is asynchronous)
-            match stdin.next() {
-                Some(Ok(key)) => {
-                    user_input(key, &mut user, &mut complete, &mut map);
-                }
-                _ => (),
-            };
+            stdin.next().and_then(|res| {
+                res.ok()
+                    .map(|key| user_input(key, &mut user, &mut complete, &mut reset, &mut map))
+            });
 
             // Check if terminal has been resized
             if check_resize(&mut term_size) {

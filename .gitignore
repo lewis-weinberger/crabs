@@ -4,3 +4,5 @@
 *~
 *.err
 *.lock
+.DS_Store
+test.ron
