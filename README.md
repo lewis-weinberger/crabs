@@ -53,7 +53,7 @@ Insert scenery by typing the appropriate key:
 	/ forward ramp
 	\ backward ramp
 	@ trampoline
-Type q to quit level.
+Each level, type r to restart and q to quit.	
 
 Use a custom map saved in RON format:
 	$ crabs custom_level.ron
@@ -67,7 +67,12 @@ Note that you can change the speed of the crabs using the `--rate` switch. This 
 <a name="customisation"></a>
 ## Customisation
 
-There are a number of default levels built into the game, but it is also possible to play your own! In order to do this you'll need to create a map and add some crabs. The map can be loaded from a string which contains a rectangular block of text. The crabs need to have positions and velocities* specified. To use your custom level you must create a RON file, formatted as follows:
+There are a number of default levels built into the game, but it is also possible to play your own! In order to do this you'll need to create a map and add some crabs. The provided `make-map` program can be used to create a map in the appropriate format (a [RON]() file). It uses the same user-interface as the game.
+```
+$ make-map                  # will prompt for filename, e.g. my_custom_map.ron
+$ crabs my_custom_map.ron
+```
+Alternatively you can manually write a level file as follows: (i) the map can be loaded from a string which contains a rectangular block of text; (ii) the crabs need to have positions and velocities* specified. The layout of the RON file should be:
 
 ```
 // custom_level.ron
@@ -82,7 +87,7 @@ There are a number of default levels built into the game, but it is also possibl
 )
 ```
 
-You can then load this level by passing the RON file path as the first argument to `crabs`. If you don't want to type out a string manually to represent your map, you can use the provided `make-map` program. This uses the same interface as the game, and allows you to place scenery to make a map. An example level is provided in the [examples](/examples) directory.
+An example level is provided in the [examples](/examples) directory.
 
 *Note that the y-coordinate starts at 0 at the top of the terminal, so positive y-velocity corresponds to a downward velocity on the terminal!
 
