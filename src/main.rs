@@ -1,14 +1,16 @@
-use crabs::{check_resize, process_args, user_input, Colour, RATE};
-use std::env;
 use std::io::{stdout, Write};
+use std::{env, thread, time};
+
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::{clear, color, cursor, style};
 
+use crabs::{check_resize, process_args, user_input, Colour, TICK_TIME};
+
 fn main() -> Result<(), std::io::Error> {
     // Process command line arguments
-    let mut rate: usize = RATE;
-    let levels = process_args(env::args(), &mut rate);
+    let mut target_tick_time: time::Duration = TICK_TIME;
+    let levels = process_args(env::args(), &mut target_tick_time);
 
     // Initialise terminal
     let mut stdout = stdout().into_raw_mode()?;
@@ -30,8 +32,9 @@ fn main() -> Result<(), std::io::Error> {
         // Game loop
         let mut complete = false;
         let mut reset = false;
-        let mut loop_count = 1;
         'game: while !complete {
+            let start_time = time::Instant::now();
+
             // Check if level needs to be reset
             if reset {
                 crabs = level.0.clone();
@@ -40,14 +43,11 @@ fn main() -> Result<(), std::io::Error> {
                 reset = false;
             }
 
-            if loop_count == 0 {
-                // Ensure that map is crab-free
-                map.decrab();
+            // Ensure that map is crab-free
+            map.decrab();
 
-                // Crabs are advanced every RATE number of game loops
-                crabs.evolve(&mut map, &mut complete);
-            }
-            loop_count = (loop_count + 1) % rate;
+            // Crabs are advanced every RATE number of game loops
+            crabs.evolve(&mut map, &mut complete);
 
             // Allow user to adjust map (input is asynchronous)
             stdin.next().and_then(|res| {
@@ -84,6 +84,11 @@ fn main() -> Result<(), std::io::Error> {
                         color::Fg(color::Reset)
                     )?;
                 }
+            }
+
+            let tick_time = time::Instant::now() - start_time;
+            if tick_time < target_tick_time {
+                thread::sleep(target_tick_time - tick_time);
             }
         }
     }

@@ -1,18 +1,19 @@
 pub mod levels;
-use ron::de::from_reader;
-use serde::Deserialize;
+
 use std::cmp;
 use std::collections::HashMap;
 use std::env::Args;
 use std::fs::File;
 use std::io::{stdin, Write};
-use std::process;
+use std::{process, time};
+
+use ron::de::from_reader;
+use serde::Deserialize;
 use termion::color;
 use termion::event::Key;
 
-// Number of game loops to wait in between updating crab positions
-#[cfg(debug_assertions)]
-pub const RATE: usize = 10;
+// Target tick time which will be the minimum period between iterations of the game loop.
+pub const TICK_TIME: time::Duration = time::Duration::from_millis(100);
 
 #[cfg(not(debug_assertions))]
 pub const RATE: usize = 50;
@@ -20,7 +21,7 @@ pub const RATE: usize = 50;
 // Terminal velocity
 pub const VMAX: isize = 10;
 
-pub fn process_args(mut args: Args, rate: &mut usize) -> Vec<(Entities, Map)> {
+pub fn process_args(mut args: Args, rate: &mut time::Duration) -> Vec<(Entities, Map)> {
     // Skip executable name
     args.next();
 
@@ -45,22 +46,22 @@ pub fn process_args(mut args: Args, rate: &mut usize) -> Vec<(Entities, Map)> {
                     println!("Use a custom map saved in RON format:");
                     println!("\t$ crabs custom_level.ron");
                     println!("To adjust the crab speed:");
-                    println!("\t$ crabs --rate N");
-                    println!("where larger N makes the crabs slower!\n");
+                    println!("\t$ crabs --tick-time N");
+                    println!("where larger N makes the crabs slower! Default is 100ms\n");
                     process::exit(0);
                 }
 
                 // User adjusted rate
-                "--rate" => match args.next() {
+                "--tick-time" => match args.next() {
                     Some(new_rate) => {
                         *rate = match new_rate.parse::<usize>() {
                             Ok(r) => {
                                 eprintln!("Using adjusted rate: {}", new_rate);
-                                r
+                                time::Duration::from_millis(r as u64)
                             }
                             Err(_) => {
                                 eprintln!("{} not a valid rate!", new_rate);
-                                RATE
+                                TICK_TIME
                             }
                         };
                         levels::default_levels()
