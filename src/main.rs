@@ -46,7 +46,7 @@ fn main() -> Result<(), std::io::Error> {
             // Ensure that map is crab-free
             map.decrab();
 
-            // Crabs are advanced every RATE number of game loops
+            // Crabs are advanced
             crabs.evolve(&mut map, &mut complete);
 
             // Allow user to adjust map (input is asynchronous)
@@ -86,6 +86,7 @@ fn main() -> Result<(), std::io::Error> {
                 }
             }
 
+            // Allow main thread to sleep until required for next tick
             let tick_time = time::Instant::now() - start_time;
             if tick_time < target_tick_time {
                 thread::sleep(target_tick_time - tick_time);

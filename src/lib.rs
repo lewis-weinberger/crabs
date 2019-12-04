@@ -15,9 +15,6 @@ use termion::event::Key;
 // Target tick time which will be the minimum period between iterations of the game loop.
 pub const TICK_TIME: time::Duration = time::Duration::from_millis(100);
 
-#[cfg(not(debug_assertions))]
-pub const RATE: usize = 50;
-
 // Terminal velocity
 pub const VMAX: isize = 10;
 
