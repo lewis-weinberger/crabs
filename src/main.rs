@@ -50,10 +50,16 @@ fn main() -> Result<(), std::io::Error> {
             crabs.evolve(&mut map, &mut complete);
 
             // Allow user to adjust map (input is asynchronous)
-            stdin.next().and_then(|res| {
-                res.ok()
-                    .map(|key| user_input(key, &mut user, &mut complete, &mut reset, &mut map))
-            });
+            loop {
+                match stdin.next() {
+                    Some(res) => {
+                        res.ok().map(|key| {
+                            user_input(key, &mut user, &mut complete, &mut reset, &mut map);
+                        });
+                    }
+                    None => { break; }
+                }
+            }
 
             // Check if terminal has been resized
             if check_resize(&mut term_size) {

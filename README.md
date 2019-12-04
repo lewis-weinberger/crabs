@@ -58,11 +58,11 @@ Each level, type r to restart and q to quit.
 Use a custom map saved in RON format:
 	$ crabs custom_level.ron
 To adjust the crab speed:
-	$ crabs --rate N
-where larger N makes the crabs slower!
+        $ crabs --tick-time N
+where larger N makes the crabs slower! Default is 100ms
 ```
 
-Note that you can change the speed of the crabs using the `--rate` switch. This switch allows the user to specify how many game loops are skipped before advancing the crabs. I've chosen some defaults for these based on my own machine, so they might not be ideal on other (significantly faster or slower) machines.
+Note that you can change the speed of the crabs using the `--tick` switch. This switch allows the user to specify the tick rate of the game (larger tick-time will slow down the crabs). 
 
 <a name="customisation"></a>
 ## Customisation
