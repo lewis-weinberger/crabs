@@ -429,7 +429,7 @@ impl Iterator for Map {
     type Item = (usize, usize, char);
 
     fn next(&mut self) -> Option<(usize, usize, char)> {
-        if (self.index[1] + 1) * (self.index[0] + 1) < self.dimensions[0] * self.dimensions[1] {
+        if (self.index[1]*self.dimensions[0] + self.index[0]) < self.dimensions[0] * self.dimensions[1] {
             // Current position
             let y = self.index[0];
             let x = self.index[1];
@@ -442,6 +442,8 @@ impl Iterator for Map {
                 if self.index[0] + 1 < self.dimensions[0] {
                     self.index[0] += 1;
                     self.index[1] = 0;
+                } else {
+                    self.index = self.dimensions;
                 }
             } else {
                 self.index[1] += 1;
